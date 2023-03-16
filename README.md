@@ -1,34 +1,113 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+To create a Next.js project with NextAuth and Google provider for authentication without using a database, follow these steps:
 
-## Getting Started
+Create a new Next.js project:
+bash
+Copy code
+npx create-next-app your-app-name
+cd your-app-name
+Install the required dependencies:
+bash
+Copy code
+npm install next-auth
+npm install @types/next-auth --save-dev
+Now, let's create the necessary files and add the code.
 
-First, run the development server:
+File: pages/api/auth/[...nextauth].ts
 
-```bash
-npm run dev
-# or
-yarn dev
-```
+typescript
+Copy code
+import { NextApiRequest, NextApiResponse } from 'next';
+import NextAuth, { NextAuthOptions } from 'next-auth';
+import Providers from 'next-auth/providers';
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+const options: NextAuthOptions = {
+  providers: [
+    Providers.Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    }),
+  ],
+  pages: {
+    signIn: '/auth/signin',
+    signOut: '/auth/signout',
+    error: '/auth/error',
+  },
+  session: {
+    jwt: true,
+  },
+  callbacks: {
+    async jwt(token, _, account) {
+      if (account) {
+        token.id = account.id;
+        token.email = account.email;
+      }
+      return token;
+    },
+    async session(session, token) {
+      session.user.id = token.id;
+      session.user.email = token.email;
+      return session;
+    },
+  },
+};
 
-You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
+export default (req: NextApiRequest, res: NextApiResponse) =>
+  NextAuth(req, res, options);
+File: pages/auth/signin.tsx
 
-[API routes](https://nextjs.org/docs/api-routes/introduction) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.js`.
+typescript
+Copy code
+import { signIn } from 'next-auth/client';
+import React from 'react';
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/api-routes/introduction) instead of React pages.
+const SignInPage: React.FC = () => {
+  return (
+    <div>
+      <h1>Sign In</h1>
+      <button onClick={() => signIn('google')}>Sign in with Google</button>
+    </div>
+  );
+};
 
-## Learn More
+export default SignInPage;
+File: pages/auth/signout.tsx
 
-To learn more about Next.js, take a look at the following resources:
+typescript
+Copy code
+import { signOut } from 'next-auth/client';
+import React from 'react';
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+const SignOutPage: React.FC = () => {
+  return (
+    <div>
+      <h1>Sign Out</h1>
+      <button onClick={() => signOut()}>Sign out</button>
+    </div>
+  );
+};
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+export default SignOutPage;
+File: pages/auth/error.tsx
 
-## Deploy on Vercel
+typescript
+Copy code
+import React from 'react';
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+const ErrorPage: React.FC = () => {
+  return (
+    <div>
+      <h1>An error occurred</h1>
+      <p>Please try again later.</p>
+    </div>
+  );
+};
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+export default ErrorPage;
+Add environment variables for the Google provider:
+Create a .env.local file in the root directory and add the following environment variables. Replace your_google_client_id and your_google_client_secret with your actual credentials.
+
+makefile
+Copy code
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+This should set up a basic Next.js application with NextAuth using the Google provider for authentication without a database.
